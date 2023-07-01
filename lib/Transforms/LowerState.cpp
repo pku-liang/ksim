@@ -543,7 +543,12 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
         }
         else if(name != "clock") {
           auto width = hw::getBitWidth(port.type);
-          driver << "    " << name << " = rand() & ((1ll << " << width << ") - 1);\n";
+          if(width < 64) {
+            driver << "    " << name << " = rand() & ((1ll << " << width << ") - 1);\n";
+          }
+          else if(width == 64) {
+            driver << "    " << name << " = rand();\n";
+          }
         }
       }
       driver << "    " << top.getSymName() << "();\n";

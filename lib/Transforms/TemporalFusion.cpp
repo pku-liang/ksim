@@ -510,8 +510,8 @@ struct ModuleEntry : public GraphValueEntry {
   Node outputNode;
   ModuleEntry(Node source, hw::HWModuleOp mod, std::optional<Node> rstNode, Node outputNode, SeqGraph & g):
     GraphValueEntry(nullptr, source,  g), mod(mod), rstNode(rstNode), outputNode(outputNode) {
-    g.addEdge(outputNode, source, 0);
-    g.addEdge(source, outputNode, 0);
+    // g.addEdge(outputNode, source, 0);
+    // g.addEdge(source, outputNode, 0);
     // if(rstNode.has_value()) {
     //   g.addEdge(rstNode.value(), source, 0);
     // }
