@@ -104,9 +104,6 @@ struct FIRRTLMemorySummary {
   size_t readLatency;
   size_t writeLatency;
   size_t maskGran;
-  RUWAttr readUnderWrite;
-  hw::WUW writeUnderWrite;
-  SmallVector<int32_t> writeClockIDs;
   SmallVector<PortInfo> inputPortInfo;
   SmallVector<PortInfo> outputPortInfo;
   FIRRTLMemorySummary(hw::HWModuleGeneratedOp gen): gen(gen) {
@@ -118,11 +115,6 @@ struct FIRRTLMemorySummary {
     readLatency       = gen->getAttr("readLatency").cast<IntegerAttr>().getUInt();
     writeLatency      = gen->getAttr("writeLatency").cast<IntegerAttr>().getUInt();
     maskGran          = gen->getAttr("maskGran").cast<IntegerAttr>().getUInt();
-    readUnderWrite    = RUWAttr(gen->getAttr("readUnderWrite").cast<IntegerAttr>().getUInt());
-    writeUnderWrite   = hw::WUW(gen->getAttr("writeUnderWrite").cast<IntegerAttr>().getInt());
-    copy(map_range(gen->getAttr("writeClockIDs").cast<ArrayAttr>(), [](Attribute attr){
-      return attr.cast<IntegerAttr>().getInt();
-    }), std::back_inserter(writeClockIDs));
     copy(map_range(gen.getPorts().inputs, [](hw::PortInfo info) {
       return parsePortName(info.getName());
     }), std::back_inserter(inputPortInfo));
@@ -139,8 +131,6 @@ struct FIRRTLMemorySummary {
     os << "latR:  " << readLatency << "\n";
     os << "latW:  " << writeLatency << "\n";
     os << "Gran:  " << maskGran << "\n";
-    os << "RUW:   " << readUnderWrite << "\n";
-    os << "WUW:   " << writeUnderWrite << "\n";
   }
   inline friend raw_ostream &operator<<(raw_ostream &os, FIRRTLMemorySummary & summary) {
     summary.print(os);

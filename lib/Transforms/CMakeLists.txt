@@ -36,12 +36,14 @@ add_circt_dialect_library(
   CIRCTHW
   CIRCTSeq
   CIRCTComb
+  CIRCTCombToArith
   CIRCTHWToLLVM
   CIRCTCombToLLVM
 
   MLIRPass
   MLIRFuncDialect
   MLIRFuncToLLVM
+  MLIRArithToLLVM
   MLIRReconcileUnrealizedCasts
 
   lemon

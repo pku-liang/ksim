@@ -1,3 +1,4 @@
+#include "circt/Conversion/CombToArith.h"
 #include "circt/Dialect/Comb/CombOps.h"
 #include "circt/Dialect/HW/HWTypes.h"
 #include "circt/Support/Namespace.h"
@@ -11,6 +12,7 @@
 #include "circt/Dialect/Comb/CombDialect.h"
 #include "circt/Dialect/Seq/SeqDialect.h"
 
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -107,6 +109,8 @@ struct CombToLLVMPass: ksim::impl::CombToLLVMBase<CombToLLVMPass> {
       populateFuncToLLVMConversionPatterns(converter, patterns);
       populateHWToLLVMConversionPatterns(converter, patterns, globals, constAggregateGlobalsMap);
       populateCombToLLVMConversionPatterns(converter, patterns);
+      populateCombToArithConversionPatterns(converter, patterns);
+      arith::populateArithToLLVMConversionPatterns(converter, patterns);
       if (failed(applyFullConversion(getOperation(), target, std::move(patterns))))
         return signalPassFailure();
       patterns.clear();

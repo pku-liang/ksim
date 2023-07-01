@@ -34,3 +34,5 @@ add_subdirectory(third_party)
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(tools)
+
+install(TARGETS ksim DESTINATION bin)

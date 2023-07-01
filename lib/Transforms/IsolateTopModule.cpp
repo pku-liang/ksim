@@ -20,7 +20,7 @@ struct IsolateTopModulePass: ksim::impl::IsolateTopModuleBase<IsolateTopModulePa
     auto modlist = getOperation();
     hw::HWModuleOp topModule = nullptr;
     modlist->walk([&](hw::HWModuleOp op) {
-      bool isTop = topModuleName.empty() ? op.isPublic() : op.moduleName() == topModuleName;
+      bool isTop = topModuleName.empty() ? op.isPublic() : op.getModuleName() == topModuleName;
       if(isTop) {topModule = op;}
       op.setPrivate();
     });

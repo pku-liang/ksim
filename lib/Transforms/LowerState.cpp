@@ -1,3 +1,4 @@
+#include "circt/Dialect/HW/HWTypes.h"
 #include "ksim/KSimDialect.h"
 #include "ksim/KSimOps.h"
 #include "ksim/Utils/RegInfo.h"
@@ -354,7 +355,7 @@ static func::FuncOp rewriteModuleOp(hw::HWModuleOp mod, llvm::DenseMap<StringRef
     }
   }
   outputOp->erase();
-  auto topName = nameMap.lookup(mod.moduleName());
+  auto topName = nameMap.lookup(mod.getModuleName());
   auto funcOp =builder.create<func::FuncOp>(mod.getLoc(), topName, builder.getFunctionType({}, {}));
   for(auto attr: mod->getAttrs()) {
     if(attr.getName().getValue().startswith("ksim")){ 
@@ -426,7 +427,7 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
     SmallVector<hw::PortInfo> portInfos;
     auto modlist = getOperation();
     for(auto mod: modlist.getOps<hw::HWModuleOp>()) {
-      nameMap[mod.moduleName()] = ns.newName(mod.moduleName());
+      nameMap[mod.getModuleName()] = ns.newName(mod.getModuleName());
       for(auto port: mod.getAllPorts()) {
         auto name = port.getName();
         nameMap[name] = ns.newName(name);
@@ -528,12 +529,6 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       driver << "\n";
       driver << "int main(int argc, char ** argv) {\n";
       driver << "  int cnt = atoi(argv[1]);\n";
-      for(auto port: portInfos) {
-        auto name = nameMap[port.getName()];
-        if(name.contains("valid")) {
-          driver << "  " << name << " = 1;\n";
-        }
-      }
       driver << "  reset = 1;\n";
       driver << "  for(auto i = " << top.getSymName() << "_reset_ahead; i >= 0; i--) {\n";
       driver << "    " << top.getSymName() << "();\n";
@@ -541,6 +536,16 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       driver << "  }\n";
       driver << "  auto start = std::chrono::system_clock::now();\n";
       driver << "  for(auto i = 0; i < cnt; i++) {\n";
+      for(auto port: portInfos) {
+        auto name = nameMap[port.getName()];
+        if(name.contains("reset")) {
+          driver << "    " << name << " = 0;\n";
+        }
+        else if(name != "clock") {
+          auto width = hw::getBitWidth(port.type);
+          driver << "    " << name << " = rand() & ((1ll << " << width << ") - 1);\n";
+        }
+      }
       driver << "    " << top.getSymName() << "();\n";
       driver << "  }\n";
       driver << "  auto stop = std::chrono::system_clock::now();\n";
