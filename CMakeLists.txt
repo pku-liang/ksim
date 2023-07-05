@@ -25,7 +25,7 @@ include(AddCIRCT)
 
 add_compile_options(-fexceptions -Wno-suggest-override -Wno-register)
 add_compile_options(-g)
-# add_compile_options(-O2)
+add_compile_options(-O2)
 
 include_directories(${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS} ${CIRCT_MAIN_INCLUDE_DIR} ${CIRCT_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -36,3 +36,4 @@ add_subdirectory(lib)
 add_subdirectory(tools)
 
 install(TARGETS ksim DESTINATION bin)
+install(TARGETS ksim-opt DESTINATION bin)

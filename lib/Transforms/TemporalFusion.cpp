@@ -110,6 +110,7 @@ struct GraphValueEntry {
 
 struct SeqGraph {
   Graph graph;
+  bool disableClockGate = false;
 
   ArcMap<int64_t> weightMap {graph};
 
@@ -186,7 +187,8 @@ struct RegEntry : public GraphEntry {
   Node inNode, outNode;
   Arc costArc;
   int64_t dataWidth;
-  RegEntry(Operation * op, SeqGraph & g): GraphEntry(op, g), info(op), inNode(g.addNode()), outNode(g.addNode()) {
+  bool disableClockGate;
+  RegEntry(Operation * op, SeqGraph & g): GraphEntry(op, g), info(op), inNode(g.addNode()), outNode(g.addNode()), disableClockGate(g.disableClockGate) {
     // g.addEdge(outNode, inNode, 0);
     costArc = g.addEdge(inNode, outNode, 1);
     port.in.setAll(inNode);
@@ -197,7 +199,7 @@ struct RegEntry : public GraphEntry {
   }
   int64_t computeCost(NodeMap<int64_t> & PMap) final {
     auto depth = PMap[inNode] + 1 - PMap[outNode];
-    if(info.en) {
+    if(info.en && !disableClockGate) {
       return computeQueueCost(dataWidth, 1) / 2 + computeQueueCost(dataWidth, depth) / 2;
     }
     else {
@@ -207,7 +209,7 @@ struct RegEntry : public GraphEntry {
   void updateArcGrad(NodeMap<int64_t> & PMap, ArcMap<int64_t> & costMap, Random & rnd) final {
     auto depth = PMap[inNode] + 1 - PMap[outNode];
     auto grad = computeQueueGrad(dataWidth, depth, rnd);
-    if(info.en) grad /= 2;
+    if(info.en && !disableClockGate) grad /= 2;
     costMap[costArc] = grad;
   }
   void dumpDot(raw_ostream & out, SeqGraph & g) final {
@@ -685,6 +687,7 @@ struct TemporalFusionPass : ksim::impl::TemporalFusionBase<TemporalFusionPass> {
   bool canBeScheduledOn(hw::HWModuleOp op) {return op.isPublic();}
   void runOnOperation() {
     SeqGraph graph;
+    graph.disableClockGate = disableClockGate;
     graph.build(getOperation());
     if(!disableOptimization) {
       graph.solve(tol, verbose);

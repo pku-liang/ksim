@@ -1,4 +1,3 @@
-#include "circt/Dialect/HW/HWTypes.h"
 #include "ksim/KSimDialect.h"
 #include "ksim/KSimOps.h"
 #include "ksim/Utils/RegInfo.h"
@@ -421,7 +420,21 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
     if(dir == hw::PortDirection::OUTPUT)  return "/* output */";
     return "/* unknown */";
   }
+  void collectStat() {
+    auto modlist = getOperation();
+    modlist.walk([&](seq::CompRegClockEnabledOp reg) {
+      if(getFusedDelay(reg).value_or(1) == 0) {
+        fusedClockGate++;
+      }
+    });
+    modlist.walk([&](Operation * op) {
+      if(isa<seq::FirRegOp>(op)) allRegs++;
+      if(isa<seq::CompRegOp>(op)) allRegs++;
+      if(isa<seq::CompRegClockEnabledOp>(op)) allRegs++;
+    });
+  }
   void runOnOperation() final {
+    collectStat();
     PrefixNamespace ns(prefix);
     llvm::DenseMap<StringRef, StringRef> nameMap;
     SmallVector<hw::PortInfo> portInfos;
@@ -529,6 +542,12 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       driver << "\n";
       driver << "int main(int argc, char ** argv) {\n";
       driver << "  int cnt = atoi(argv[1]);\n";
+      for(auto port: portInfos) {
+        auto name = nameMap[port.getName()];
+        if(name.contains("valid")) {
+          driver << "  " << name << " = 1;\n";
+        }
+      }
       driver << "  reset = 1;\n";
       driver << "  for(auto i = " << top.getSymName() << "_reset_ahead; i >= 0; i--) {\n";
       driver << "    " << top.getSymName() << "();\n";
@@ -536,21 +555,6 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       driver << "  }\n";
       driver << "  auto start = std::chrono::system_clock::now();\n";
       driver << "  for(auto i = 0; i < cnt; i++) {\n";
-      for(auto port: portInfos) {
-        auto name = nameMap[port.getName()];
-        if(name.contains("reset")) {
-          driver << "    " << name << " = 0;\n";
-        }
-        else if(name != "clock") {
-          auto width = hw::getBitWidth(port.type);
-          if(width < 64) {
-            driver << "    " << name << " = rand() & ((1ll << " << width << ") - 1);\n";
-          }
-          else if(width == 64) {
-            driver << "    " << name << " = rand();\n";
-          }
-        }
-      }
       driver << "    " << top.getSymName() << "();\n";
       driver << "  }\n";
       driver << "  auto stop = std::chrono::system_clock::now();\n";

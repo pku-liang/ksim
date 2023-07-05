@@ -112,7 +112,8 @@ struct FlattenPass : ksim::impl::FlattenBase<FlattenPass> {
     resetNames(&getContext(), getOperation());
     modlist->walk([&](hw::HWModuleOp mod) {
       for(auto & op: mod.getOps()) {
-        numOperations += op.getNumOperands();
+        numEdges += op.getNumOperands();
+        numOps += 1;
       }
     });
   }

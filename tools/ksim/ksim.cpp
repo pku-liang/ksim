@@ -82,6 +82,7 @@ static cl::opt<std::string> dumpGraph("dump-graph", cl::desc("dump graph"), cl::
 static cl::opt<std::string> CXXFLAGS("CXXFLAGS", cl::desc("Generated CXXFLAGS"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> LIBS("LIBS", cl::desc("Generated LIBS"), cl::init(""), cl::cat(mainCategory));
 static std::string programName;
+static cl::opt<bool> disableClockGate("disable-clock-gate", cl::desc("Disable clock gating optimization"), cl::init(false), cl::cat(mainCategory));
 
 static void printOp(Operation *op, raw_ostream &os) {
   if (emitBytecode) {
@@ -101,6 +102,8 @@ static LogicalResult processBuffer(
   auto mod = parseSourceFile<ModuleOp>(sourceMgr, &context);
   if(!mod) return failure();
   PassManager pm(&context);
+  if(failed(applyPassManagerCLOptions(pm)))
+    return failure();
   pm.enableTiming(ts);
   if(inputLevel < Flattened && Flattened <= outputLevel) {
     pm.addPass(ksim::createRemoveSVPass());
@@ -125,6 +128,7 @@ static LogicalResult processBuffer(
     options.disableOptimization = disableOptimizations;
     options.verbose = verbose;
     options.graphOut = outputGraphFilename;
+    options.disableClockGate = disableClockGate;
     pm.addNestedPass<hw::HWModuleOp>(ksim::createTemporalFusionPass(options));
   }
   if(inputLevel < KSimLow && KSimLow <= outputLevel) {

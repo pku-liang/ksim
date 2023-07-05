@@ -37,7 +37,8 @@ def Flatten : Pass<"ksim-flatten", "circt::ModuleOp"> {
   let description = "Flatten all module into top module.";
   let constructor = "ksim::createFlattenPass()";
   let statistics = [
-    Statistic<"numOperations", "num-operations", "number of operations after flatten">
+    Statistic<"numEdges", "num-edges", "number of edges after flatten">,
+    Statistic<"numOps", "num-ops", "number of ops after flatten">
   ];
 }
 
@@ -95,7 +96,8 @@ def TemporalFusion : Pass<"ksim-temporal-fusion", "circt::hw::HWModuleOp"> {
     Option<"tol", "tol", "int", "10", "Maximum iteration to solve the programming problem">,
     Option<"verbose", "verbose", "bool", "false", "Verbose optimization log">,
     Option<"graphOut", "graph-out", "std::string", "", "output graph dot visualization">,
-    Option<"disableOptimization", "disable-optimization", "bool", "false", "disable optimization">
+    Option<"disableOptimization", "disable-optimization", "bool", "false", "disable optimization">,
+    Option<"disableClockGate", "disable-clock-gate", "bool", "false", "disable clock gate optimization">
   ];
 }
 
@@ -109,6 +111,10 @@ def LowerState : Pass<"ksim-lower-state", "circt::ModuleOp"> {
     Option<"emitComb", "emitComb", "bool", "false", "emit combinational logic">,
     Option<"prefix", "prefix", "std::string", "", "variable prefix">,
     Option<"disableOptimization", "disable-optimization", "bool", "false", "disable optimization">
+  ];
+  let statistics = [
+    Statistic<"fusedClockGate", "fused-clock-gate", "number of fused clock gate">,
+    Statistic<"allRegs", "all-regs", "number of all registers">
   ];
 }
 
