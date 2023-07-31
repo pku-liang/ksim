@@ -29,5 +29,6 @@ cmake .. \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DMLIR_DIR=$PWD/../llvm/build/lib/cmake/mlir \
   -DLLVM_DIR=$PWD/../llvm/build/lib/cmake/llvm \
-  -DESI_COSIM=OFF -DESI_CAPN=OFF
+  -DESI_COSIM=OFF -DESI_CAPN=OFF \
+  -DVERILATOR_DISABLE=ON
 make install
