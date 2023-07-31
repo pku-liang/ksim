@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ "$INSTALL_PREFIX" != "" ]]; then
+if [[ "$INSTALL_PREFIX" == "" ]]; then
   INSTALL_PREFIX=$(realpath ../install)
   [ -d $INSTALL_PREFIX ] || mkdir $INSTALL_PREFIX
 fi
