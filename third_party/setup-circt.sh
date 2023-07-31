@@ -16,7 +16,7 @@ cmake ../llvm \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_ENABLE_PROJECTS="mlir" \
-  -DLLVM_TARGETS_TO_BUILD="X86;RISCV" \
+  -DLLVM_TARGETS_TO_BUILD="X86;RISCV"
 make install
 
 popd
