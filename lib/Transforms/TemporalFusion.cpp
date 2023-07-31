@@ -199,7 +199,10 @@ struct RegEntry : public GraphEntry {
   }
   int64_t computeCost(NodeMap<int64_t> & PMap) final {
     auto depth = PMap[inNode] + 1 - PMap[outNode];
-    if(info.en && !disableClockGate) {
+    if(disableClockGate) {
+      return computeQueueCost(dataWidth, depth) / 10;
+    }
+    if(info.en) {
       return computeQueueCost(dataWidth, 1) / 2 + computeQueueCost(dataWidth, depth) / 2;
     }
     else {
@@ -210,6 +213,7 @@ struct RegEntry : public GraphEntry {
     auto depth = PMap[inNode] + 1 - PMap[outNode];
     auto grad = computeQueueGrad(dataWidth, depth, rnd);
     if(info.en && !disableClockGate) grad /= 2;
+    if(disableClockGate) grad /= 10;
     costMap[costArc] = grad;
   }
   void dumpDot(raw_ostream & out, SeqGraph & g) final {

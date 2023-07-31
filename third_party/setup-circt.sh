@@ -1,7 +1,9 @@
 #!/bin/bash
 
-INSTALL_PREFIX=$(realpath ../install)
-[ -d $INSTALL_PREFIX ] || mkdir $INSTALL_PREFIX
+if [[ "$INSTALL_PREFIX" != "" ]]; then
+  INSTALL_PREFIX=$(realpath ../install)
+  [ -d $INSTALL_PREFIX ] || mkdir $INSTALL_PREFIX
+fi
 
 cd circt
 git submodule update --init
