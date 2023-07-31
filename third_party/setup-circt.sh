@@ -6,7 +6,6 @@ if [[ "$INSTALL_PREFIX" != "" ]]; then
 fi
 
 cd circt
-git submodule update --init
 
 pushd llvm
 
