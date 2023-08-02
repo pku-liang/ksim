@@ -15,6 +15,7 @@ add_circt_dialect_library(
   Flatten.cpp
   LoadFIRRTL.cpp
   TemporalFusion.cpp
+  TemporalFusion2.cpp
   RemoveSV.cpp
   LowerToLLVM.cpp
   LowerState.cpp

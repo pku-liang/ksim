@@ -20,6 +20,7 @@ std::unique_ptr<mlir::Pass> createMiliToMoorePass();
 std::unique_ptr<mlir::Pass> createLoadFIRRTLPass();
 std::unique_ptr<mlir::Pass> createCleanDesignPass();
 std::unique_ptr<mlir::Pass> createTemporalFusionPass(TemporalFusionOptions options=TemporalFusionOptions());
+std::unique_ptr<mlir::Pass> createTemporalFusion2Pass(TemporalFusion2Options options=TemporalFusion2Options());
 std::unique_ptr<mlir::Pass> createRemoveSVPass();
 std::unique_ptr<mlir::Pass> createLowerStatePass(LowerStateOptions options=LowerStateOptions());
 std::unique_ptr<mlir::Pass> createLowerToLLVMPass(LowerToLLVMOptions options=LowerToLLVMOptions());

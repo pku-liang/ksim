@@ -101,6 +101,19 @@ def TemporalFusion : Pass<"ksim-temporal-fusion", "circt::hw::HWModuleOp"> {
   ];
 }
 
+def TemporalFusion2 : Pass<"ksim-temporal-fusion2", "circt::hw::HWModuleOp"> {
+  let summary = "Temporal Fusion Algorithm for KSim";
+  let description = summary;
+  let constructor = "ksim::createTemporalFusion2Pass()";
+  let options = [
+    Option<"tol", "tol", "int", "10", "Maximum iteration to solve the programming problem">,
+    Option<"verbose", "verbose", "bool", "false", "Verbose optimization log">,
+    Option<"graphOut", "graph-out", "std::string", "", "output graph dot visualization">,
+    Option<"disableOptimization", "disable-optimization", "bool", "false", "disable optimization">,
+    Option<"disableClockGate", "disable-clock-gate", "bool", "false", "disable clock gate optimization">
+  ];
+}
+
 def LowerState : Pass<"ksim-lower-state", "circt::ModuleOp"> {
   let summary = "Lower state component to ksim.low.queue op";
   let description = summary;

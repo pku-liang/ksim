@@ -78,6 +78,7 @@ static cl::opt<bool> emitDriver("a", cl::desc("emit driver, will automatically f
 static cl::opt<bool> verbose("v", cl::desc("verbose"), cl::init(false), cl::cat(mainCategory));
 static cl::opt<bool> generateDebugInfo("g", cl::desc("debug"), cl::init(false), cl::cat(mainCategory));
 static cl::opt<bool> forceZeroReset("force-zero-reset", cl::desc("force register with no reset value with zero reset"), cl::init(false), cl::cat(mainCategory));
+static cl::opt<bool> computeFused("compute-fused", cl::desc("compute fuzed registers for evaluation"), cl::init(false), cl::cat(mainCategory));
 static cl::opt<std::string> dumpGraph("dump-graph", cl::desc("dump graph"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> CXXFLAGS("CXXFLAGS", cl::desc("Generated CXXFLAGS"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> LIBS("LIBS", cl::desc("Generated LIBS"), cl::init(""), cl::cat(mainCategory));
@@ -129,7 +130,17 @@ static LogicalResult processBuffer(
     options.verbose = verbose;
     options.graphOut = outputGraphFilename;
     options.disableClockGate = disableClockGate;
-    pm.addNestedPass<hw::HWModuleOp>(ksim::createTemporalFusionPass(options));
+    ksim::TemporalFusion2Options options2;
+    options2.disableOptimization = disableOptimizations;
+    options2.verbose = verbose;
+    options2.graphOut = outputGraphFilename;
+    options2.disableClockGate = disableClockGate;
+    if(computeFused) {
+      pm.addNestedPass<hw::HWModuleOp>(ksim::createTemporalFusion2Pass(options2));
+    }
+    else {
+      pm.addNestedPass<hw::HWModuleOp>(ksim::createTemporalFusionPass(options));
+    }
   }
   if(inputLevel < KSimLow && KSimLow <= outputLevel) {
     ksim::LowerStateOptions options;
