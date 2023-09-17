@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+messages: If you use this software, please cite it as below.
+authors:
+- family-names: Zhou
+  given-names: Kexing
+- family-names: Liang
+  given-names: Yun
+- family-names: Lin
+  given-names: Yibo
+- family-names: Wang
+  given-names: Runsheng
+- family-names: Huang
+  given-names: Ru
+title: "Khronos: Fusing Memory Access for Improved Hardware RTL Simulation"
+version: 1.0.0
+doi: 10.1145/3613424.3614301
+url: https://github.com/pku-liang/ksim
