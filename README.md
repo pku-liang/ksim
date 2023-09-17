@@ -4,6 +4,12 @@ Khronos is moving to [https://github.com/pku-liang](https://github.com/pku-liang
 
 ## Introductions
 
+Khronos is a cycle-accurate software RTL simulation tool that exploits the temporal data (hardware state) locality between consecutive cycles. Khronos will fuse state writes and reads with temporal localities, effectively reducing the pressure to the host cache and memory. 
+
+<img src='.fig/schedule.svg'>
+
+As shown in the figure, the queue graph captures temporal data dependencies and enables temporal optimization between cycles. By adjust the simulation order and re-schedule the simulation, Khronos can reducing the memory access and accelerate RTL simulation.
+
 ## Installation
 
 Setup depedencies:
@@ -28,7 +34,25 @@ make install
 
 ## Usage
 
+Currently, Khronos has full support for firtool frontend, partly support for moore and calyx frontend.
 
+```bash
+# add current install prefix to path
+export PATH=$PWD/install/bin:$PATH
+
+# first, translate firrtl file to mlir dialect
+firtool --ir-hw --disable-all-randomization $design.fir -o $design.mlir
+
+# then, translate mlir to llvm ir
+#   generating header and default implementation
+ksim $design.mlir -v -o $design.ll --out-header=$design.h --out-driver=$design.cpp
+
+# call LLVM to compile the llvm ir file to binary
+llc --relocation-model=dynamic-no-pic -O2 -filetype=obj $design.ll -o $design.o
+
+# link testbench and simulator together
+clang++ -O2 $design.o $design.cpp -o $design
+```
 
 ## Citing Khronos
 
