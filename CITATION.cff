@@ -3,12 +3,16 @@ messages: If you use this software, please cite it as below.
 authors:
 - family-names: Zhou
   given-names: Kexing
+  orcid: 0000-0001-7635-3425
 - family-names: Liang
   given-names: Yun
+  orcid: 0000-0002-9076-7998
 - family-names: Lin
   given-names: Yibo
+  orcid: 0000-0002-0977-2774
 - family-names: Wang
   given-names: Runsheng
+  orcid: 0000-0002-7514-0767
 - family-names: Huang
   given-names: Ru
 title: "Khronos: Fusing Memory Access for Improved Hardware RTL Simulation"
@@ -21,12 +25,16 @@ preferred-citation:
   authors:
   - family-names: Zhou
     given-names: Kexing
+    orcid: 0000-0001-7635-3425
   - family-names: Liang
     given-names: Yun
+    orcid: 0000-0002-9076-7998
   - family-names: Lin
     given-names: Yibo
+    orcid: 0000-0002-0977-2774
   - family-names: Wang
     given-names: Runsheng
+    orcid: 0000-0002-7514-0767
   - family-names: Huang
     given-names: Ru
   doi: 10.1145/3613424.3614301
