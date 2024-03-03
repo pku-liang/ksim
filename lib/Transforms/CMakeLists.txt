@@ -23,6 +23,7 @@ add_circt_dialect_library(
   DCE.cpp
   MiliToMoore.cpp
   DumpComb.cpp
+  Partition.cpp
 
   DEPENDS
   KSimTransformsIncGen

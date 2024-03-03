@@ -25,6 +25,7 @@ std::unique_ptr<mlir::Pass> createRemoveSVPass();
 std::unique_ptr<mlir::Pass> createLowerStatePass(LowerStateOptions options=LowerStateOptions());
 std::unique_ptr<mlir::Pass> createLowerToLLVMPass(LowerToLLVMOptions options=LowerToLLVMOptions());
 std::unique_ptr<mlir::Pass> createAddLLVMDebugInfoPass();
+std::unique_ptr<mlir::Pass> createPartitionPass(PartitionOptions options=PartitionOptions());
 std::unique_ptr<mlir::Pass> createDumpCombPass(DumpCombOptions options=DumpCombOptions());
 
 #define GEN_PASS_REGISTRATION

@@ -197,16 +197,4 @@ std::unique_ptr<AbstractQueue> ksim::createQueue(mlir::Location loc, mlir::Strin
   if(width <= 4 && depth * width <= 128) return createQueue(ShiftQueueType, loc, name, elemType, depth, isPublic, builder);
   if(width * depth <= 128) return createQueue(VecQueueType, loc, name, elemType, depth, isPublic, builder);
   return createQueue(PtrQueueType, loc, name, elemType, depth, isPublic, builder);
-  //   if(depth == 1)
-  //   return createQueue(OneSlotQueueType, loc, name, elemType, depth, isPublic, builder);
-  // if(depth <= 4)
-  //   return createQueue(NaiveQueueType, loc, name, elemType, depth, isPublic, builder);
-  // if((width == 8 || width == 16 || width == 32) && width * depth <= 128) {
-  //   return createQueue(VecQueueType, loc, name, elemType, depth, isPublic, builder);
-  // }
-  // if(depth * width <= 128) {
-  //   if(depth <= 16 || width <= 4)
-  //     return createQueue(ShiftQueueType, loc, name, elemType, depth, isPublic, builder);
-  // }
-  // return createQueue(PtrQueueType, loc, name, elemType, depth, isPublic, builder);
 }

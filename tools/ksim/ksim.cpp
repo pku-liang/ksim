@@ -70,6 +70,7 @@ static cl::opt<bool> emitBytecode("emit-bytecode",
   cl::init(false), cl::cat(mainCategory));
 static cl::opt<bool> disableOptimizations("disable-optimizations", cl::desc("disable optimizations"), cl::init(false), cl::cat(mainCategory));
 static cl::opt<std::string> outputHeaderFilename("out-header", cl::desc("output header file name"), cl::value_desc("filename"), cl::init(""), cl::cat(mainCategory));
+static cl::opt<std::string> outputParallelHeaderFilename("out-par-header", cl::desc("output header file name"), cl::value_desc("filename"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> outputDriverFilename("out-driver", cl::desc("output driver file name"), cl::value_desc("filename"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> outputGraphFilename("out-graph", cl::desc("output graph file name"), cl::value_desc("filename"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> emitVarPrefix("prefix", cl::desc("emit variable prefix"), cl::value_desc("name"), cl::init(""), cl::cat(mainCategory));
@@ -82,6 +83,7 @@ static cl::opt<bool> computeFused("compute-fused", cl::desc("compute fuzed regis
 static cl::opt<std::string> dumpGraph("dump-graph", cl::desc("dump graph"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> CXXFLAGS("CXXFLAGS", cl::desc("Generated CXXFLAGS"), cl::init(""), cl::cat(mainCategory));
 static cl::opt<std::string> LIBS("LIBS", cl::desc("Generated LIBS"), cl::init(""), cl::cat(mainCategory));
+static cl::opt<int> parallel("parallel", cl::desc("parallel"), cl::init(0), cl::cat(mainCategory));
 static std::string programName;
 static cl::opt<bool> disableClockGate("disable-clock-gate", cl::desc("Disable clock gating optimization"), cl::init(false), cl::cat(mainCategory));
 
@@ -154,6 +156,12 @@ static LogicalResult processBuffer(
       pm.addPass(mlir::createCSEPass());
       pm.addPass(mlir::createCanonicalizerPass());
     }
+  }
+  if(parallel) {
+    ksim::PartitionOptions options;
+    options.hdrFile = outputParallelHeaderFilename;
+    options.components = parallel;
+    pm.addPass(ksim::createPartitionPass(options));
   }
   if(inputLevel < LLVMDialect && LLVMDialect <= outputLevel) {
     pm.addPass(mlir::createConvertFuncToLLVMPass());

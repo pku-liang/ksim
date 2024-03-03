@@ -523,9 +523,14 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       header << "void " << top.getSymName() << "();\n";
       header << "#define " << top.getSymName() << "_output_ahead " << outputAhead << "\n";
       header << "#define " << top.getSymName() << "_reset_ahead " << resetAhead << "\n";
+      header << "#ifndef PARALLEL\n";
       if(combEval.has_value()) {
         header << "void " << combEval->getSymName() << "();\n";
       }
+      header << "#define InitFunc()\n";
+      header << "#define EvalFunc() " << top.getSymName() << "()\n";
+      header << "#define StopFunc()\n";
+      header << "#endif\n";
       header << "\n\n";
       header << "#ifdef __cplusplus\n";
       header << "}\n";
@@ -549,14 +554,16 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
         }
       }
       driver << "  reset = 1;\n";
+      driver << "  InitFunc();\n";
       driver << "  for(auto i = " << top.getSymName() << "_reset_ahead; i >= 0; i--) {\n";
-      driver << "    " << top.getSymName() << "();\n";
+      driver << "    EvalFunc();\n";
       driver << "    reset = 0;\n";
       driver << "  }\n";
       driver << "  auto start = std::chrono::system_clock::now();\n";
       driver << "  for(auto i = 0; i < cnt; i++) {\n";
-      driver << "    " << top.getSymName() << "();\n";
+      driver << "    EvalFunc();\n";
       driver << "  }\n";
+      driver << "  StopFunc();\n";
       driver << "  auto stop = std::chrono::system_clock::now();\n";
       driver << "  std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() << std::endl;\n";
       driver << "  return 0;\n";

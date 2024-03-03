@@ -140,6 +140,17 @@ def LowerToLLVM : Pass<"ksim-lower-to-llvm", "circt::ModuleOp"> {
   ];
 }
 
+def Partition : Pass<"ksim-partition", "circt::ModuleOp"> {
+  let summary = "Partition for parallel simulation";
+  let description = summary;
+  let constructor = "ksim::createPartitionPass()";
+  let options = [
+    Option<"components", "k", "int", "4", "partition components">,
+    Option<"kahypar", "kahypar", "std::string", "\"KaHyPar\"", "kahypar executable">,
+    Option<"hdrFile", "header", "std::string", "\"\"", "emit simulation header">
+  ];
+}
+
 def CombToLLVM : Pass<"ksim-comb-to-llvm", "circt::ModuleOp"> {
   let summary = "Lower combinational logic to llvm dialect without changing module";
   let description = summary;
