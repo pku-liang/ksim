@@ -1,3 +1,6 @@
 [submodule "third_party/circt"]
 	path = third_party/circt
 	url = https://github.com/llvm/circt.git
+[submodule "third_party/kahypar"]
+	path = third_party/kahypar
+	url = https://github.com/kahypar/kahypar.git
