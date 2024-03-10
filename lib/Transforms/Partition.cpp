@@ -417,12 +417,16 @@ struct PartitionInfo {
     OpBuilder updateBuilder(builder.getContext());
     evalBuilder.setInsertionPointToEnd(evalFunc.addEntryBlock());
     updateBuilder.setInsertionPointToEnd(updateFunc.addEntryBlock());
+    llvm::DenseMap<StringRef, size_t> usedNames;
+    auto getNextName = [&](StringRef name) {
+      return name + "_buf_" + std::to_string(usedNames[name]++);
+    };
     for(auto op: dup) {
       auto info = getStateName(op);
       if(info && info->dir == Write) {
         for(auto [i, opOpe]: enumerate(op->getOpOperands())) {
           auto value = opOpe.get();
-          auto name = builder.getStringAttr(info->name + "_buf_" + std::to_string(i));
+          auto name = builder.getStringAttr(getNextName(info->name));
           auto def = builder.create<ksim::DefQueueOp>(loc, name, value.getType(), 1);
           def->setAttr("partId", builder.getI64IntegerAttr(id));
           evalBuilder.create<ksim::PushQueueOp>(loc, name, value);

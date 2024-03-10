@@ -2,5 +2,10 @@ export PATH=$PWD/install/bin:$PATH
 export KSIM_ROOT=$PWD
 
 build() {
-    make -C $KSIM_ROOT/build -j4
+    make -C $KSIM_ROOT/build -j4 ksim ksim-opt
+}
+
+run-ksim() {
+    base=${1%%.mlir}
+    $KSIM_ROOT/build/bin/ksim $1 --parallel 4 --out-header=$base.h --out-driver=$base.cpp --out-par-header=$base.par.h -o $base.ll
 }
