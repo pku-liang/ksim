@@ -391,7 +391,7 @@ static void rewriteTargets(mlir::Value clockSignal, mlir::Value value, ArrayRef<
   if(delayVec.front() == 0) delayVec.erase(delayVec.begin());
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfterValue(value);
-  auto queueOp = builder.create<ksim::QueueOp>(value.getLoc(), value, clockSignal, delayVec);
+  auto queueOp = builder.create<ksim::QueueOp>(value.getLoc(), value, clockSignal, llvm::SmallVector<int64_t>(delayVec));
   auto results = queueOp->getResults();
   for(auto [delay, tgt]: llvm::zip(delays, targets)) {
     if(delay != 0) {

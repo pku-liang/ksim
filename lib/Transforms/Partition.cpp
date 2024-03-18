@@ -1,6 +1,6 @@
-#include "circt/Dialect/HW/HWOps.h"
 #include "ksim/KSimPasses.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/STLExtras.h"
@@ -8,7 +8,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -427,7 +426,7 @@ struct PartitionInfo {
         for(auto [i, opOpe]: enumerate(op->getOpOperands())) {
           auto value = opOpe.get();
           auto name = builder.getStringAttr(getNextName(info->name));
-          auto def = builder.create<ksim::DefQueueOp>(loc, name, value.getType(), 1);
+          auto def = builder.create<ksim::DefQueueOp>(loc, name, value.getType(), 1, SmallVector<int64_t>());
           def->setAttr("partId", builder.getI64IntegerAttr(id));
           evalBuilder.create<ksim::PushQueueOp>(loc, name, value);
           auto newValue = updateBuilder.create<ksim::GetQueueOp>(loc, value.getType(), name, 0);

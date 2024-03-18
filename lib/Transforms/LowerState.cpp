@@ -146,7 +146,7 @@ struct LowerStateRewritePattern: OpRewritePattern<T> {
   void createQueue(mlir::Location loc, llvm::StringRef name, mlir::Type type, int64_t depth, ArrayRef<int64_t> delays, PatternRewriter & rewriter) const {
     PatternRewriter::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToEnd(topBlock);
-    auto op = rewriter.create<ksim::DefQueueOp>(loc, name, type, depth, delays);
+    auto op = rewriter.create<ksim::DefQueueOp>(loc, name, type, depth, to_vector(delays));
     op.setPrivate();
   }
   mlir::Value createPipe(StringRef qname, mlir::Value in, int64_t delay, PatternRewriter & rewriter) const {
@@ -334,7 +334,7 @@ static func::FuncOp rewriteModuleOp(hw::HWModuleOp mod, llvm::DenseMap<StringRef
   builder.setInsertionPointToEnd(mod->getBlock());
   auto createQueue = [&](auto in) {
     auto [v, p] = in;
-    auto op = builder.create<ksim::DefQueueOp>(v.getLoc(), nameMap.lookup(p.getName()), v.getType(), 1, 0);
+    auto op = builder.create<ksim::DefQueueOp>(v.getLoc(), nameMap.lookup(p.getName()), v.getType(), 1, SmallVector<int64_t>{0});
     op.setPublic();
     return op;
   };

@@ -106,11 +106,6 @@ def DefQueueOp : KSimOp<"low.def_queue", [Symbol]> {
   let description = summary;
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttrOf<AnyType>:$type, I64Attr:$depth, I64SmallVectorArrayAttr:$delay);
   let assemblyFormat = "$sym_name `depth` $depth `:` $type `delay` $delay attr-dict";
-  let builders = [
-    OpBuilder<(ins "mlir::StringRef":$name, "mlir::Type":$type, "int64_t":$depth, CArg<"mlir::ArrayRef<int64_t>", "{}">:$delay), [{
-      build($_builder, $_state, name, type, depth, ::llvm::SmallVector<int64_t, 8>(delay));
-    }]>
-  ];
 }
 
 def GetQueueOp : KSimOp<"low.get_queue", [Pure]> {
