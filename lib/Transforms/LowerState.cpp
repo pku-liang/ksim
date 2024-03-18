@@ -510,7 +510,7 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
         auto name = nameMap[port.getName()];
         if(name == "clock") continue;
         auto width = hw::getBitWidth(port.type);
-        header << "extern " << getDirectionStr(port.direction);
+        header << "__attribute__((weak)) " << getDirectionStr(port.direction);
         if(width <= 128) {
           header << " " << getFitType(width) << " " << name << "; // " << port.type << "\n";
         }
