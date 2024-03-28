@@ -184,9 +184,10 @@ struct DepGraph {
   llvm::DenseSet<std::pair<size_t, size_t>> mffcEdges;
   llvm::SmallVector<llvm::SmallVector<size_t>> mffcFanin;
   llvm::SmallVector<llvm::DenseSet<size_t>> propagateSet;
-  DepGraph(const llvm::DenseMap<Operation*, size_t> &mffcId, size_t mffcCnt): 
-    mffcId(mffcId), mffcCnt(mffcCnt),
-    mffcSize(mffcCnt), mffcExtraWeight(mffcCnt), mffcFanin(mffcCnt), propagateSet(mffcCnt)
+  DepGraph(const llvm::DenseMap<Operation*, size_t> &mffcId, size_t mffcCnt)
+  : mffcId(mffcId), mffcCnt(mffcCnt),
+    mffcSize(mffcCnt), mffcExtraWeight(mffcCnt),
+    mffcFanin(mffcCnt), propagateSet(mffcCnt)
   {
     for(auto [op, id]: mffcId) {
       mffcSize[id]++;
@@ -306,13 +307,13 @@ static std::string runKaHyPar(StringRef graph, StringRef program, size_t k) {
   llvm::sys::fs::remove(partFile);
   auto programPath = llvm::sys::findProgramByName(program);
   assert(!!programPath && "can't found KaHyPar program");
+  errs() << "KaHyPar cmdline: ";
+  llvm::interleave(args, errs(), " ");
   auto retcode = llvm::sys::ExecuteAndWait(programPath->data(), args, std::nullopt, redirects);
+  errs() << "KaHyPar log:\n";
+  errs() << openInputFile(logfile)->getBuffer() << "\n";
   if(retcode || !llvm::sys::fs::exists(partFile)) {
-    errs() << "KaHyPar cmdline: ";
-    llvm::interleave(args, errs(), " ");
     errs() << "\n";
-    errs() << "KaHyPar log:\n";
-    errs() << openInputFile(logfile)->getBuffer() << "\n";
     assert(false && "KaHyPar fail");
   }
   llvm::sys::fs::remove(logfile);

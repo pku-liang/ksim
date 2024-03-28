@@ -8,5 +8,5 @@ build() {
 run-ksim() {
     base=${1%%.mlir}
     env FILENAME=$base envsubst < $KSIM_ROOT/rt/rt.cpp > $base-final.cpp
-    $KSIM_ROOT/build/bin/ksim $1 --parallel 4 --out-header=$base.h --out-driver=$base.cpp --out-par-header=$base.par.h -o $base.ll
+    $KSIM_ROOT/build/bin/ksim $1 --parallel 1 --out-header=$base.h --out-driver=$base.cpp --out-par-header=$base.par.h -o $base.ll
 }
