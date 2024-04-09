@@ -147,7 +147,7 @@ def Partition : Pass<"ksim-partition", "circt::ModuleOp"> {
   let options = [
     Option<"components", "k", "int", "4", "partition components">,
     Option<"kahypar", "kahypar", "std::string", "\"KaHyPar\"", "kahypar executable">,
-    Option<"hdrFile", "header", "std::string", "\"\"", "emit simulation header">
+    Option<"driverFile", "driver", "std::string", "\"\"", "emit simulation header">
   ];
 }
 

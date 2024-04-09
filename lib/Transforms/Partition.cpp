@@ -3,6 +3,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -171,33 +172,35 @@ struct MFFCExtractor {
   }
 };
 
-static std::pair<llvm::DenseMap<Operation*, size_t>, size_t> extractMFFC(func::FuncOp op) {
+static std::pair<llvm::DenseMap<Operation*, size_t>, size_t> extractMFFCMapping(func::FuncOp op) {
   MFFCExtractor extractor(op);
   return {extractor.mffcId, extractor.nextMffcId};
 }
 
 struct DepGraph {
-  const llvm::DenseMap<Operation*, size_t> &mffcId;
+  const llvm::DenseMap<Operation*, size_t> &mffcIdMapping;
   size_t mffcCnt;
   llvm::SmallVector<size_t> mffcSize;
-  llvm::SmallVector<size_t> mffcExtraWeight;
   llvm::DenseSet<std::pair<size_t, size_t>> mffcEdges;
   llvm::SmallVector<llvm::SmallVector<size_t>> mffcFanin;
-  llvm::SmallVector<llvm::DenseSet<size_t>> propagateSet;
-  DepGraph(const llvm::DenseMap<Operation*, size_t> &mffcId, size_t mffcCnt)
-  : mffcId(mffcId), mffcCnt(mffcCnt),
-    mffcSize(mffcCnt), mffcExtraWeight(mffcCnt),
-    mffcFanin(mffcCnt), propagateSet(mffcCnt)
+  llvm::SmallVector<llvm::SmallDenseSet<size_t>> propagateSet;
+  DepGraph(const llvm::DenseMap<Operation*, size_t> &mffcIdMapping, size_t mffcCnt)
+  : mffcIdMapping(mffcIdMapping),
+    mffcCnt(mffcCnt),
+    mffcSize(mffcCnt), 
+    mffcFanin(mffcCnt),
+    propagateSet(mffcCnt)
   {
-    for(auto [op, id]: mffcId) {
+    for(auto [op, id]: mffcIdMapping) {
       mffcSize[id]++;
       for(auto ope: op->getOperands()) {
         if(auto opeOp = ope.getDefiningOp()) {
-          if(mffcId.contains(opeOp)) {
-            auto from = mffcId.at(opeOp);
-            mffcEdges.insert({from, id});
-            mffcFanin[id].push_back(from);
-
+          if(mffcIdMapping.contains(opeOp)) {
+            auto from = mffcIdMapping.at(opeOp);
+            if (mffcEdges.insert({from, id}).second) {
+              // errs() << "adde " << from << " " << id << "\n";
+              mffcFanin[id].push_back(from);
+            }
           }
         }
       }
@@ -227,44 +230,34 @@ struct DepGraph {
       }
     }
   }
-  void dumpHyperGraph(raw_fd_ostream & fout) {
-    fout << mffcCnt << " " << propagateSet.size() << " 01\n";
-    for(auto [id, ps]: enumerate(propagateSet)) {
-      fout << mffcSize[id];
-      for(auto p: ps) {
-        fout << " " << mffcSize[p] + 1;
-      }
-      fout << "\n";
-    }
-  }
 };
 
 struct StateInfo {
   size_t id;
   StringRef name;
-  Operation * defOpe=nullptr;
-  llvm::SmallVector<Operation*> pushOpe={};
-  llvm::SmallVector<Operation*> getOpe ={};
+  Operation * defOps=nullptr;
+  llvm::SmallVector<Operation*> writeOps={};
+  llvm::SmallVector<Operation*> readOps ={};
   size_t partId;
 };
 
-llvm::DenseMap<StringRef, StateInfo> stateAnalyze(Operation * op) {
+llvm::DenseMap<StringRef, StateInfo> extractStates(Operation * op) {
   llvm::DenseMap<StringRef, StateInfo> stateInfo;
   op->walk([&](Operation * walkOp) {
     llvm::TypeSwitch<Operation*, void>(walkOp)
     .Case<ksim::DefQueueOp>   ([&](auto op) {
       stateInfo[op.getSymName()].name   = op.getSymName();
-      stateInfo[op.getSymName()].defOpe = op;
+      stateInfo[op.getSymName()].defOps = op;
     })
     .Case<ksim::DefMemOp>     ([&](auto op) {
       stateInfo[op.getSymName()].name   = op.getSymName();
-      stateInfo[op.getSymName()].defOpe = op;
+      stateInfo[op.getSymName()].defOps = op;
     })
-    .Case<ksim::PushQueueOp>  ([&](auto op) {stateInfo[op.getQueue()].pushOpe.push_back(op);})
-    .Case<ksim::PushQueueEnOp>([&](auto op) {stateInfo[op.getQueue()].pushOpe.push_back(op);})
-    .Case<ksim::GetQueueOp>   ([&](auto op) {stateInfo[op.getQueue()].getOpe.push_back(op);})
-    .Case<ksim::LowWriteMemOp>([&](auto op) {stateInfo[op.getMem()].pushOpe.push_back(op);})
-    .Case<ksim::LowReadMemOp> ([&](auto op) {stateInfo[op.getMem()].getOpe.push_back(op);})
+    .Case<ksim::PushQueueOp>  ([&](auto op) {stateInfo[op.getQueue()].writeOps.push_back(op);})
+    .Case<ksim::PushQueueEnOp>([&](auto op) {stateInfo[op.getQueue()].writeOps.push_back(op);})
+    .Case<ksim::GetQueueOp>   ([&](auto op) {stateInfo[op.getQueue()].readOps.push_back(op);})
+    .Case<ksim::LowWriteMemOp>([&](auto op) {stateInfo[op.getMem()].writeOps.push_back(op);})
+    .Case<ksim::LowReadMemOp> ([&](auto op) {stateInfo[op.getMem()].readOps.push_back(op);})
     .Default([&](auto){});
   });
   size_t nextStateId = 0;
@@ -272,63 +265,6 @@ llvm::DenseMap<StringRef, StateInfo> stateAnalyze(Operation * op) {
     pair.second.id = nextStateId++;
   }
   return stateInfo;
-}
-
-static std::string createTempFile(StringRef suffix) {
-  SmallVector<char> pathvec;
-  llvm::sys::fs::createTemporaryFile("rep", suffix, pathvec);
-  return pathvec.data();
-}
-
-static std::string createConfFile() {
-  auto configFile = createTempFile("ini");
-  std::error_code ec;
-  raw_fd_ostream fs(configFile, ec);
-  assert(!ec && "unable to write configure file");
-  fs << DefaultKaHyParConfig;
-  fs.close();
-  return configFile;
-}
-
-static std::string runKaHyPar(StringRef graph, StringRef program, size_t k) {
-  auto conf = createConfFile();
-  auto k_str = std::to_string(k);
-  auto eps_str = "0.03";
-  auto seed_str = std::to_string(-1);
-  SmallVector<StringRef> args = {
-    program,
-    "-h", graph, "-k", k_str, "-e", eps_str,
-    "-o", "km1", "-m", "direct", "-p", conf,
-    "-w", "true",
-  };
-  auto logfile = createTempFile("log");
-  SmallVector<std::optional<StringRef>> redirects = {std::nullopt, logfile, logfile};
-  auto partFile = (graph + ".part" + k_str + ".epsilon" + eps_str + ".seed" + seed_str + ".KaHyPar").str();
-  llvm::sys::fs::remove(partFile);
-  auto programPath = llvm::sys::findProgramByName(program);
-  assert(!!programPath && "can't found KaHyPar program");
-  errs() << "KaHyPar cmdline: ";
-  llvm::interleave(args, errs(), " ");
-  auto retcode = llvm::sys::ExecuteAndWait(programPath->data(), args, std::nullopt, redirects);
-  errs() << "KaHyPar log:\n";
-  errs() << openInputFile(logfile)->getBuffer() << "\n";
-  if(retcode || !llvm::sys::fs::exists(partFile)) {
-    errs() << "\n";
-    assert(false && "KaHyPar fail");
-  }
-  llvm::sys::fs::remove(logfile);
-  return partFile;
-}
-
-static std::optional<llvm::SmallVector<size_t>> loadPartition(StringRef path, size_t N) {
-  std::ifstream partFile(path.str());
-  llvm::SmallVector<size_t> result(N);
-  for(size_t i = 0; i < N; i++) {
-    if(!(partFile >> result[i])) {
-      return std::nullopt;
-    }
-  }
-  return result;
 }
 
 static llvm::SmallVector<Operation*> recursiveDuplicate(llvm::SmallVector<Operation*> seeds, const llvm::DenseMap<Operation*, size_t> & opOrder) {
@@ -387,6 +323,96 @@ static std::optional<StateOpInfo> getStateName(Operation * op) {
   .Default([&](auto){return std::nullopt;});
 }
 
+struct KaHyPar {
+  size_t nNodes;
+  llvm::SmallVector<size_t> nodeWeight;
+  llvm::SmallVector<size_t> edgeWeight;
+  llvm::SmallVector<llvm::SmallDenseSet<size_t>> edges;
+  KaHyPar(size_t nNodes): nNodes(nNodes), nodeWeight(nNodes, 1) {}
+  static std::string createTempFile(StringRef suffix) {
+    SmallVector<char> pathvec;
+    auto result = llvm::sys::fs::createTemporaryFile("rep", suffix, pathvec);
+    assert(!result && "unable to create temp file");
+    return pathvec.data();
+  }
+  void addEdge(size_t weight, llvm::SmallDenseSet<size_t> edge) {
+    edgeWeight.push_back(weight);
+    edges.push_back(std::move(edge));
+  }
+  void dump(StringRef filename) {
+    std::error_code ec;
+    raw_fd_ostream of(filename, ec);
+    assert(!ec && "unable to dump graph file");
+    of << edges.size() << " " << nNodes << " 11\n";
+    for (auto [w, e]: zip(edgeWeight, edges)) {
+      of << w;
+      for(auto v: e) {
+        of << " " << v + 1;
+      }
+      of << "\n";
+    }
+    for(auto n: nodeWeight) {
+      of << n << "\n";
+    }
+  }
+  void createConfigFile(StringRef filename) {
+    std::error_code ec;
+    raw_fd_ostream fs(filename, ec);
+    assert(!ec && "unable to write configure file");
+    fs << DefaultKaHyParConfig;
+    fs.close();
+  }
+  llvm::SmallVector<size_t> partId;
+  void parseResultFile(StringRef filename) {
+    std::ifstream partFile(filename.str());
+    partId.resize(nNodes);
+    for(size_t i = 0; i < nNodes; i++) {
+      if(!(partFile >> partId[i])) {
+        partId[i] --;
+        assert(false && "invalid result file");
+      }
+    }
+    partFile.close();
+  }
+  void runPartition(size_t k, StringRef program="KaHyPar") {
+    auto confFile = createTempFile("ini");
+    createConfigFile(confFile);
+    auto graphFile = createTempFile("hgr");
+    dump(graphFile);
+    auto k_str = std::to_string(k);
+    auto eps_str = "0.03";
+    auto seed_str = std::to_string(-1);
+    SmallVector<StringRef> args = {
+      program,
+      "-h", graphFile,
+      "-k", k_str,
+      "-e", eps_str,
+      "-o", "km1",
+      "-m", "direct",
+      "-p", confFile,
+      "-w", "true",
+    };
+    auto logfile = createTempFile("log");
+    SmallVector<std::optional<StringRef>> redirects = {std::nullopt, logfile, logfile};
+    auto partFile = graphFile + ".part" + k_str + ".epsilon" + eps_str + ".seed" + seed_str + ".KaHyPar";
+    auto programPath = llvm::sys::findProgramByName(program);
+    assert(!!programPath && "can't found KaHyPar program");
+    errs() << "KaHyPar cmdline: ";
+    llvm::interleave(args, errs(), " ");
+    errs() << "\n";
+    auto retcode = llvm::sys::ExecuteAndWait(programPath->data(), args, std::nullopt, redirects);
+    errs() << "KaHyPar log:\n";
+    errs() << openInputFile(logfile)->getBuffer() << "\n";
+    if(retcode || !llvm::sys::fs::exists(partFile)) {
+      errs() << "\n";
+      assert(false && "KaHyPar fail");
+    }
+    parseResultFile(partFile);
+    llvm::sys::fs::remove(partFile);
+    llvm::sys::fs::remove(logfile);
+  }
+};
+
 struct PartitionInfo {
   size_t id;
   llvm::SmallVector<const StateInfo*,0> writeStates;
@@ -398,7 +424,7 @@ struct PartitionInfo {
     llvm::SmallVector<Operation*> writes;
     for(auto write: writeStates) {
       writeNames.insert(write->name);
-      writes.append(write->pushOpe.begin(), write->pushOpe.end());
+      writes.append(write->writeOps.begin(), write->writeOps.end());
     }
     auto dup = recursiveDuplicate(writes, opOrder);
     for(auto op: dup) {
@@ -477,45 +503,32 @@ struct PartitionPass : public ksim::impl::PartitionBase<PartitionPass> {
   using ksim::impl::PartitionBase<PartitionPass>::PartitionBase;
   void runOnOperation() {
     auto mod = getOperation();
-    auto stateInfo = stateAnalyze(mod);
-    errs() << "state analysis\n";
     auto func = *mod.getOps<func::FuncOp>().begin();
-    auto path = createTempFile("hgr");
-    std::error_code ec;
-    raw_fd_ostream fout(path, ec);
-    if(ec) return signalPassFailure();
-    auto [mffcId, mffcCnt] = extractMFFC(func);
-    errs() << "mffc\n";
-    DepGraph dep(mffcId, mffcCnt);
+    auto stateInfo = extractStates(mod);
+    auto [mffcIdMapping, mffcCnt] = extractMFFCMapping(func);
+    DepGraph dep(mffcIdMapping, mffcCnt);
+    KaHyPar hgp(stateInfo.size());
     for(auto &[name, info]: stateInfo) {
       const auto id = info.id;
-      for(auto op: info.pushOpe) {
-        dep.propagateSet[mffcId[op]].insert(id);
+      hgp.nodeWeight[id] = std::max(info.writeOps.size(), 1ul);
+      for(auto op: info.writeOps) {
+        dep.propagateSet[mffcIdMapping[op]].insert(id);
       }
-      for(auto op: info.getOpe) {
-        dep.propagateSet[mffcId[op]].insert(id);
+      for(auto op: info.readOps) {
+        dep.propagateSet[mffcIdMapping[op]].insert(id);
       }
     }
-    errs() << "extract dep\n";
     dep.propagate();
-    dep.dumpHyperGraph(fout);
-    fout.close();
-    errs() << "dump hyper graph\n";
-    errs() << "run KaHyPar\n";
-    auto partFile = runKaHyPar(path, kahypar, components);
-    errs() << "load configuration\n";
-    auto resultOption = loadPartition(partFile, mffcCnt);
-    if(resultOption->empty()) {
-      errs() << "load partition failed\n";
-      return signalPassFailure();
+    for(size_t i = 0; i < dep.propagateSet.size(); i++) {
+      hgp.addEdge(dep.mffcSize[i], std::move(dep.propagateSet[i]));
     }
-    auto result = *resultOption;
+    hgp.runPartition(components, kahypar);
     llvm::SmallVector<PartitionInfo> partitions(components);
     OpBuilder builder(&getContext());
     builder.setInsertionPointToEnd(mod.getBody());
     for(auto &[name, info]: stateInfo) {
-      auto partId = info.partId = result[info.id];
-      info.defOpe->setAttr("partId", builder.getI64IntegerAttr(partId));
+      auto partId = info.partId = hgp.partId[info.id];
+      info.defOps->setAttr("partId", builder.getI64IntegerAttr(partId));
       partitions[partId].writeStates.push_back(&info);
       partitions[partId].id = partId;
     }
@@ -528,29 +541,48 @@ struct PartitionPass : public ksim::impl::PartitionBase<PartitionPass> {
     }
     func.erase();
     sortStates(mod);
-    if(!hdrFile.empty()) {
-      raw_fd_ostream header(hdrFile, ec);
-      header << "#pragma once\n\n";
-      header << "#ifdef __cplusplus\n";
-      header << "#include<cstdlib>\n";
-      header << "extern \"C\"{\n";
-      header << "#else\n";
-      header << "#include<stdlib.h>\n";
-      header << "#endif\n";
-      for(auto &part: partitions) {
-        header << "void " << part.evalFuncName << "();\n";
-        header << "void " << part.updateFuncName << "();\n";
+    if(!driverFile.empty()) {
+      std::error_code ec;
+      raw_fd_ostream output(driverFile, ec);
+      output << "#include <cstdlib>\n";
+      output << "#include <cstdlib>\n";
+      output << "#include <omp.h>\n";
+      output << "#include <chrono>\n";
+      output << "#include <iostream>\n";
+      output << "namespace chrono = std::chrono;\n";
+      output << "\n";
+      output << "extern \"C\" {\n";
+      for(int i = 0; i < components; i++) {
+        output << "    extern void partition_eval_" << i << "();\n";
+        output << "    extern void partition_update_" << i << "();\n";
       }
-      header << "#ifdef __cplusplus\n";
-      header << "}\n";
-      header << "#endif\n";
-      header << "const size_t numWorkers = " << components << ";\n";
-      header << "void (*const f[][2])() = {\n";
-      for(auto &part: partitions) {
-        header << "{" << part.evalFuncName << ", " << part.updateFuncName << "}, \n";
+      output << "}\n";
+      output << "int main(int argc, char ** argv) {\n";
+      output << "    omp_set_num_threads(" << components << ");\n";
+      output << "    auto cnt = atoi(argv[1]);\n";
+      output << "    auto start_point = chrono::system_clock::now();\n";
+      output << "    for(auto i = 0; i < cnt; i++) {\n";
+      output << "        #pragma omp parallel sections\n";
+      output << "        {\n";
+      for(int i = 0; i < components; i++) {
+      output << "            #pragma omp section\n";
+      output << "            partition_eval_" << i << "();\n";
       }
-      header << "};\n";
-      header.close();
+      output << "        }\n";
+      output << "        #pragma omp parallel sections\n";
+      output << "        {\n";
+      for(int i = 0; i < components; i++) {
+      output << "            #pragma omp section\n";
+      output << "            partition_update_" << i << "();\n";
+      }
+      output << "        }\n";
+      output << "    }\n";
+      output << "    auto stop_point = chrono::system_clock::now();\n";
+      output << "    std::cout << chrono::duration_cast<chrono::microseconds>(stop_point - start_point).count() << std::endl;\n";
+      output << "    return 0;\n";
+      output << "}\n";
+
+      output.close();
     }
   }
 };

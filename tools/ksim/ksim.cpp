@@ -147,7 +147,9 @@ static LogicalResult processBuffer(
   if(inputLevel < KSimLow && KSimLow <= outputLevel) {
     ksim::LowerStateOptions options;
     options.headerFile = outputHeaderFilename;
-    options.driverFile = outputDriverFilename;
+    if(!parallel) {
+      options.driverFile = outputDriverFilename;
+    }
     options.emitComb = emitComb;
     options.prefix = emitVarPrefix;
     options.disableOptimization = disableOptimizations;
@@ -159,7 +161,7 @@ static LogicalResult processBuffer(
   }
   if(parallel) {
     ksim::PartitionOptions options;
-    options.hdrFile = outputParallelHeaderFilename;
+    options.driverFile = outputDriverFilename;
     options.components = parallel;
     pm.addPass(ksim::createPartitionPass(options));
   }

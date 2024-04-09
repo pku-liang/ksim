@@ -6,7 +6,14 @@ build() {
 }
 
 run-ksim() {
+    par=1
+    if [[ "$1" == "-k" ]]; then
+        shift
+        par=$1
+        shift
+    fi
     base=${1%%.mlir}
+    shift
     env FILENAME=$base envsubst < $KSIM_ROOT/rt/rt.cpp > $base-final.cpp
-    $KSIM_ROOT/build/bin/ksim $1 --parallel 1 --out-header=$base.h --out-driver=$base.cpp --out-par-header=$base.par.h -o $base.ll
+    $KSIM_ROOT/build/bin/ksim $1 --parallel $par --out-header=$base.h --out-driver=$base.cpp --out-par-header=$base.par.h -o $base.ll $@
 }
