@@ -509,8 +509,9 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       for(auto port: portInfos) {
         auto name = nameMap[port.getName()];
         if(name == "clock") continue;
+        if(name == "clk") continue;
         auto width = hw::getBitWidth(port.type);
-        header << "extern " << getDirectionStr(port.direction);
+        header << "__attribute__((weak)) " << getDirectionStr(port.direction);
         if(width <= 128) {
           header << " " << getFitType(width) << " " << name << "; // " << port.type << "\n";
         }
@@ -521,6 +522,7 @@ struct LowerStatePass : ksim::impl::LowerStateBase<LowerStatePass> {
       }
       header << "\n\n";
       header << "void " << top.getSymName() << "();\n";
+      header << "#define eval " << top.getSymName() << "\n";
       header << "#define " << top.getSymName() << "_output_ahead " << outputAhead << "\n";
       header << "#define " << top.getSymName() << "_reset_ahead " << resetAhead << "\n";
       if(combEval.has_value()) {

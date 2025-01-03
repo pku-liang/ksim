@@ -1,3 +1,5 @@
+#!/bin/bash
+
 import re
 import sys
 from argparse import ArgumentParser
@@ -21,16 +23,16 @@ def trans_module(m: re.Match):
 data = re.sub(r'public module', trans_module, data)
 def trans_numlit(m: re.Match):
     w = m.group(2)
-    tpe = m.group(3).lower()
+    tpe = m.group(4).lower()
     if tpe == 'b': base = 2
     if tpe == 'o': base = 8
     if tpe == 'x': base = 16
-    v = int(m.group(4), base=base)
-    res = f'{m.group(1)}Int<{w}>({v})'
+    v = int(m.group(5), base=base)
+    res = f'{m.group(1)}Int<{w}>({m.group(3)}{v})'
     if verbose:
         ferr.write(f'Modify {m.group(0)} => {res}\n')
     return res
-data = re.sub(r'([U|S])Int<(\d+)>\(0([bxoBXO])([01]+)\)', trans_numlit, data)
+data = re.sub(r'([U|S])Int<(\d+)>\(([+-]?)0([bxoBXO])([01]+)\)', trans_numlit, data)
 fout.write(data)
 fin.close()
 fout.close()
