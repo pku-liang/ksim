@@ -16,8 +16,9 @@ cmake ../llvm \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_ENABLE_PROJECTS="mlir" \
-  -DLLVM_TARGETS_TO_BUILD="X86;RISCV"
-make install
+  -DLLVM_TARGETS_TO_BUILD="X86;RISCV" \
+  -GNinja
+ninja install
 
 popd
 
@@ -30,5 +31,6 @@ cmake .. \
   -DMLIR_DIR=$PWD/../llvm/build/lib/cmake/mlir \
   -DLLVM_DIR=$PWD/../llvm/build/lib/cmake/llvm \
   -DESI_COSIM=OFF -DESI_CAPN=OFF \
-  -DVERILATOR_DISABLE=ON
-make install
+  -DVERILATOR_DISABLE=ON \
+  -GNinja
+ninja install
